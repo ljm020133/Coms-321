@@ -1,0 +1,483 @@
+//Gabriel Perez & Blaze Krug
+
+//Notes on the stack for this program:
+//practice should be always to have a[] on bottom so that we can grab it after popping 
+//everything 
+//Note stack order should be for parameter p
+//SP = [p0|p1|p2|....|N|a[]|] for the delete to work properly
+//So run stack_generator and then add the reset after that procedure call
+main:
+	//CREATE AN ARRAY OF SIZE N (30 for now) 
+	ADDI X0,X0,#40			//X0 = N 
+	  
+
+	BL stack_generator		//create the stack 
+	
+	//array is filled on the stack and parameters
+	
+	BL fill 			//fill the array on the stack  
+	
+	//next next need to call cycle sort and then direct the flow of info correctly 
+	BL cycle_sort
+	
+	//----*NEVER GETTING TO THIS POINT SOMEHOW RERUNS CYCLE SORT AND CRASHES**------//
+	//called print to show our array is correctly sorted 
+	//called binary search on the array after the printing and printed the values
+	//outside of main see line 414 
+	
+	
+	//Parameters (a[], start = X2, end = X3, value = X4)
+	ADD X9,XZR,X0		//X9 = X0 = N
+	//initialize vars
+	ADDI X2,XZR,#0		//start = 0
+	SUBI X3,X9,#1		//end = N-1
+	ADDI X4,XZR,#0		//value = 0
+	//BL binary_search
+	PRNT X0
+	
+	ADDI X2,XZR,#0		//start = 0
+	SUBI X3,X9,#1		//end = N-1
+	SUBI X4,X9,#1		//value = N-1
+	//BL binary_search
+	PRNT X0
+	
+	ADDI X2,XZR,#0		//start = 0
+	SUBI X3,X9,#1		//end = N-1
+	LSR X4,X9,#2		//value = N/2
+	//BL binary_search
+	PRNT X0
+	
+	ADDI X2,XZR,#0		//start = 0
+	SUBI X3,X9,#1		//end = N-1
+	ADDI X4,X9,#0		//value = N
+	//BL binary_search
+	PRNT X0
+	
+	// Terminate the program
+	B end
+
+//for creating the stack to hold the array of size N and the variable N 		
+stack_generator:
+	
+	//loop through adding room to the stack for the value
+	
+	ADDI X9,X9,#0		//i = 0 
+	ADDI X10,X10,#0		//stack index = 0
+	
+	//if(i<N add space to the stack)
+	SUBS X10,X0,X9
+	CBZ X10, stack_generator_add
+	SUBI SP,SP,#8		//make room for an item for the size of the array
+	ADDI X20,X20,#8
+	ADDI X9,X9,#1		//increment by 1
+	B stack_generator
+	
+	
+stack_generator_add:
+	//ADD ARRAY OF SIZE N 
+	
+	STUR X1, [SP,#0]	//Store a[] of size n on the stack 
+	
+	//add N to the stack **we will add more as we see fit in this code***
+	SUBI SP,SP,#8
+	SUBI SP,SP,#8		//allocate memory ontp the stack
+	STUR X0, [SP,#0]	//store N in the stack
+	
+ 	RET:
+
+
+
+
+
+		
+fill:  //X0 = n, X1 = a[]
+	
+	LDUR X0, [SP, #0]   //n = 10 
+	
+	LDUR X1, [SP,#8]    //X1 = a[0]
+	
+	ADDI X9, XZR, #0   //i = 0
+	ADD X10, XZR, X1   //initialize the index at a[0]
+	
+fill_loop:
+	//if i == n leave the fill loop
+	SUB X11, X9, X0		//X11 = i - n
+	
+	CBZ X11,fill_loop_end	//X11 = 0 branch 
+	
+	//storing stuff
+	SUB X12,X0,X9		//X12 = n-i
+	SUBI X12,X12,#1		//X12=- 1
+	STUR X12, [X10,#0] 	//a[i]=n-i-1=X12
+	
+	ADDI X9,X9,#1		//i += 1
+	ADDI X10, X10, #8	//index += 8 (moves to the address of a[i+1])
+
+	//cycle back to the top of the procedure 
+	B fill_loop
+
+fill_loop_end:
+        BR LR
+    
+    
+    
+    
+    
+    
+        
+        
+cycle_sort:
+	//here need to use the stack to grab the values for the params X0 X1
+	ADDI X9,XZR,#0		//intialize cstart to 0
+	ADDI X10,XZR,#0		//intialize val to 0
+	ADDI X11,XZR,#0		//intialize idx to 0
+	
+	B cycle_sort_loop
+cycle_sort_loop:
+	
+	LSL X12,X9,#3		//cstart << 3
+	ADD X12,X1,X12		//address of a[cstart]
+	LDUR X12, [X12,#0]	//VALUE=a[cstart]
+	
+
+	///check if cstart < n-1
+	SUBI X13,X0,#1			//X13 = n-1
+	SUB X13,X9,X13			//X13 = cstart - n -1
+
+	CBZ X13, cycle_sort_end		//if cstart = n-1 exit for loop
+	
+	//need start and value --> update stack to [start, value, N, a[]]
+	SUBI SP,SP,#16		//make room for the two items
+	STUR X9, [SP, #0]	//start at sp position 1
+	STUR X12, [SP, #8]	//value at SP pos 2
+	
+	
+	BL find_index			//cal to index should store return in stack 
+	
+	LDUR X11, [SP,#0]		//get the return value of find_index = idx
+	ADDI SP,SP,#8			//delete the return from the stack SP = [N, a[]]
+	
+	
+	//check for idx == cstart 
+	SUBS X14,X9,X11			//X13 = cstart - idx
+	
+	CBZ X14, cycle_sort_increment	//return back to top of loop or continue		
+	
+	
+	//continue
+	//need to update index again using skip_duplicates
+	//initialize stack --> SP =[Value, Start,....]
+	SUBI SP,SP,#16		//make room for start and value
+	STUR X9, [SP,#8]
+	STUR X12, [SP,#0]	//SP = [Value, start, N, a[]]
+	
+	BL skip_duplicates
+
+	
+	LDUR X11, [SP,#0]		//get the return value of skip_duplicates = idx
+	
+	//ADDI SP,SP,#8			//delete the return from the stack 
+	
+	//perform swap on val and a[idx]
+	LSL X11,X11,#3			//shift indx for a[]
+	ADD X11,X1,X11			//address of a[idx]
+	
+	LDUR X15, [X1,#232]		//X15 = a[idx]
+	
+	//***PERFORM SWAP****//
+	LSL X16,X12,#3		//index << 3
+	LSL X17,X9,#3		//start << 3
+	ADD X16,X1,X16		//address of a[index]
+	ADD X17,X1,X17		//address of a[start]
+	
+	
+	LDUR X18, [X16,#0]	//X16 = a[index]
+	LDUR X19, [X17,#0]	//X17 = a[start]
+	
+	
+	STUR X19, [X16, #0]	//start @ index address
+	STUR X18, [X17,#0]	//index @ start address 
+	
+	
+	
+	//run complete_cycle
+	//parameters a, n, cstart, idx, val 
+	//current stack is [idx, N, a]
+	SUBI SP,SP,#16			//make room for cstart val 
+	STUR X9, [SP,#8]
+	STUR X12, [SP,#0]
+	
+	//new stack is:
+	//[val,cstart,idx,N,a] (this will be used in complete cycle)
+	
+	BL complete_cycle
+	
+	ADDI X9,X9,#1
+	B cycle_sort_loop
+	
+cycle_sort_increment:
+	ADDI X9,X9,#1	//cstart++
+	B cycle_sort_loop
+		
+cycle_sort_end:
+	//does nothing
+	
+	B print	    //This was added to show the array was sorted and then to call a mock test on binary search and show its output in the console
+	//BR LR      **---This was the original way the program was built where BR LR returned to main and carried on with binary search--**
+	
+
+
+
+
+	
+//find index method 
+//function returns the index = value
+//These variables will need to be initialized somehow before find_index
+//Start and value
+find_index:
+	//stack for this implementation is [start, value, N, a[]]
+	LDUR X2, [SP,#0]	//start from stack
+	ADDI X14,X2,#1		//i = start +1
+	ADD X13,X2,XZR		//index = start
+	LDUR X3, [SP,#8]	//Value from stack
+	ADDI SP,SP,#16		//SP = [N,[a]]
+	
+find_index_loop:
+	SUB X10, X14, X0	//X10 = i-n
+	
+	//if(i-n=0)
+	//n = 30=X0 i = 1=X9
+	
+	CBZ X10, find_index_end
+	//loop body 
+	
+	LSL X10,X14,#3		//X10+=8
+	ADD X11,X10,X1		//X11 = adress of a[i]
+	LDUR X11,[X11,#0]	//X11 = a[i]
+	
+	//conditional ((if a[i] < value) index++)
+	
+	SUBS X20,X3,X11		//X20 = value-a[i]
+	
+	B.GE find_index_inc	//increment index if found a[i] > value
+	//ADDI X14,X14,#1	//i+=1
+	ADDI X14,X14,#1	//i+=1
+	B find_index_loop	
+	
+find_index_inc:
+	ADDI X13,X13,#1	//index +=1
+	ADDI X14,X14,#1	//i+=1
+	B find_index_loop
+	
+find_index_end:
+	   
+	   //add index to the stack to return 
+	   SUBI SP,SP,#8	//make room for an item 
+	   STUR X13, [SP,#0]	//SP = [index, N, a[]]
+	  
+	   BR LR
+	  
+	   
+
+
+
+
+
+
+
+
+
+
+//complete cycle 
+complete_cycle:
+	//[val,cstart,idx,N,a] (this will be used in complete cycle)
+	LDUR X4, [SP,#0]	//value from stack
+	LDUR X2, [SP,#8]	//start from stack 
+	LDUR X3, [SP,#16]	//index from stack
+	
+	ADDI SP,SP,#16		//delete from stack 
+	
+complete_cycle_loop:
+	SUB X9,X2,X3		//X9 = index - start 
+	
+	CBZ X9, complete_cycle_end	//end if index == start
+	
+	BL find_index		//call this and then save the index return to the stack
+	//load index off the stack before call 
+	//PARAMS: a, idx, val
+	//add idx, val to the stack
+	SUBI SP,SP,#16		//make room for two items
+	STUR X2, [SP,#8]	//add start to the stack
+	STUR X4, [SP,#0]	//add value to the stack 
+	
+	BL skip_duplicates	//call this and then save the index to the stack 
+	LDUR X3, [SP, #0]	//X3 = index return from skip_duplicates
+	ADDI SP, SP, #8		//delete index from stack (new stack is [N,a[]]
+	
+	//***PERFORM SWAP****//
+	LSL X10,X3,#3		//X3 << 3
+	LSL X11,X2,#3		//X2 << 3
+	LDUR X12, [X10,#0]	//X10 = a[index]
+	LDUR X13, [X11,#0]	//X11 = a[start]
+	STUR X13, [X10, #0]	//start @ index address
+	STUR X12, [X11,#0]	//index @ start address 
+	
+	
+	//swap X10 and X4  (a[index] & X4) 
+	
+//end of cycle_sort (now we will call binary_search)	
+complete_cycle_end:
+	
+	BR LR 
+
+
+
+
+
+
+
+
+
+
+//the parameters are start, value, and a[]=X1
+//need to initialize start and value for now 
+skip_duplicates:
+	//load start from the stack [value, start, N, a[]]
+	LDUR X2, [SP,#8]	//X2 = start
+	LDUR X3, [SP,#0]	//X3 = value
+	
+	//pop of the stack 
+	ADDI SP,SP,#16		//stack = [N,a[]]
+	ADD X10,XZR,X2		//index = start 
+	
+	//B print
+	
+skip_duplicates_loop:
+	//check for loop (get a[index])
+	LSL X11,X10,#3		//address of a[index]
+	LDUR X17, [X11,#0]	//X17=a[index]
+	SUB X17,X12,X3		//X17=a[index]-value
+	
+	CBZ X17, skip_duplicates_exit
+	
+	//increment index 
+	ADDI X10,X10,#1		//index += 1
+	
+skip_duplicates_exit:
+	   
+	   //add index to the stack to return 
+	   SUBI SP,SP,#8	//CREATE ROOM FOR ONE ITEM
+	   
+	   STUR X10, [SP,#0] //stack is now [index, N, a[]]
+	  
+	   BR LR
+	
+
+
+//procedure for printing the array for debugging and validating output
+print: 
+//arguments: X1 = &a, X0 = n
+	ADDI X9, XZR, #0 	//X9 = i = 0
+	//ADDI X0, X0, #2
+	//initialize an array 
+	ADDI X17,XZR,#1
+	ADDI X18,XZR,#2
+	
+	
+top_of_print_loop:
+	SUB X11, X0, X9		//X11 = i - n
+	
+	CBZ X11,end_of_print_loop	//X11 = 0 branch 
+	
+	LSL X10, X9, #3 //X10 = 8i
+	ADD X10, X10, X1 //X10 = &a[i]
+	LDUR X10, [X10, #0] //X10 = a[i]
+	PRNT X10
+	
+ 	ADDI X9, X9, #1 //i++
+	
+	B top_of_print_loop
+	
+end_of_print_loop:
+	//PRNL 
+	B binary_search_set_up
+
+//mock run from the main to show binary search works 
+binary_search_set_up:
+//Parameters (a[], start = X2, end = X3, value = X4)
+	ADD X9,XZR,X0		//X9 = X0 = N
+	//initialize vars
+	ADDI X2,XZR,#0		//start = 0
+	SUBI X3,X9,#1		//end = N-1
+	ADDI X4,XZR,#0		//value = 0
+	BL binary_search
+	PRNT X0
+	
+	ADDI X2,XZR,#0		//start = 0
+	SUBI X3,X9,#1		//end = N-1
+	SUBI X4,X9,#1		//value = N-1
+	BL binary_search
+	PRNT X0
+	
+	ADDI X2,XZR,#0		//start = 0
+	SUBI X3,X9,#1		//end = N-1
+	LSR X4,X9,#2		//value = N/2
+	BL binary_search
+	PRNT X0
+	
+	ADDI X2,XZR,#0		//start = 0
+	SUBI X3,X9,#1		//end = N-1
+	ADDI X4,X9,#0		//value = N
+	BL binary_search
+	PRNT X0
+	
+	B end
+
+//procedure for binary search
+//Parameters (a[], start = X2, end = X3, value = X4) 
+binary_search:
+	//set initial when going in to 0
+	ADDI X11,XZR,#0
+	B binary_search_run 
+binary_search_run:
+	
+	//check first two conditionals to return 
+	//check if end < start --> case_1
+	SUB X10,X3,X2		//end - start 
+	B.LE binary_search_case1		//---**This always branches no matter what so X0 always ends up being = -1**---/
+	
+	//modify index
+	ADD X11,X2,X3		//index = start+end
+	LSR X11,X11,#1		//index = (start+end)/2
+	//if a[index] == value --> case_2
+	LSL X12,X11,#3		//index << 3
+	ADD X12,X1,X11		//address of a[index]
+	LDUR X12, [X11,#0]	//X11 = a[index]
+	SUB X13, X12,X4		//a[index] - value
+	
+	CBZ, binary_search_case_2
+	//if a[index] > value --> case_3
+	ADDI X13,X13,#0
+	B.GE binary_search_case3
+	
+	//set index++
+	ADDI X11,X11,#1
+	B binary_search
+
+
+binary_search_case1: 
+	SUBI X0,XZR,#1	//return -1
+	BR LR
+
+binary_search_case_2:
+	ADD X0,X11,XZR	//return index
+	BR LR
+
+binary_search_case3:
+	SUBI X11,X11,#1	//set index = index - 1
+	B binary_search
+
+//call to end the program
+end:
+
+

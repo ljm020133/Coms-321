@@ -1,0 +1,267 @@
+// Jun-Sang Kim, junsange, 232683500
+// Jonmin Lee, jongminl, 718476775
+
+ADDI X1, XZR, #10 // setting array length
+ADDI X0, XZR, #0 // setting initial array address
+
+ADD X19, X0, XZR // saving initial array value
+ADD X20, X1, XZR // saving array length 
+BL fill 
+
+ADD X0, X19, XZR // setting initial array address for insertion_sort
+ADD X1, X20, XZR // setting array length for insertion_sort
+BL insertion_sort
+
+ADD X0, X19, XZR // setting inital address for print
+ADD X1, X20, XZR // setting total size for print
+BL print_array
+
+// ADD X0, XZR, XZR	// X0 = a
+// ADDI X1, XZR, #5	// X1 = n
+
+// SUBI SP, SP, #16
+// STUR X0, [SP, #0]
+// STUR X1, [SP, #8]
+
+// BL fill
+
+// LDUR X1, [SP, #8]
+// LDUR X0, [SP, #0]
+// BL insertion_sort
+
+PRNL
+ADD X0, X19, XZR
+ADDI X1, XZR, #0
+ADD X2, X20, XZR
+BL binary_search
+PRNT X0
+ADD X0, X19, XZR
+ADDI X1, XZR, #9
+ADD X2, X20, XZR
+BL binary_search
+PRNT X0
+ADD X0, X19, XZR
+ADDI X1, XZR, #5
+ADD X2, X20, XZR
+BL binary_search
+PRNT X0
+ADD X0, X19, XZR
+ADDI X1, XZR, #99
+ADD X2, X20, XZR
+BL binary_search
+PRNT X0
+
+B end
+
+fill:
+    SUBI X1, X1, #1     // Remove one from size
+    STUR X1, [X0, #0]   // Store size value
+    ADDI X0, X0, #8     // INcrement array by 1
+    SUBS XZR, XZR, X1   // Check if we are below 0
+    B.LT fill           
+    BR LR
+
+// fill:
+// 	ADD X9, X0, XZR		// X9 --> a
+// 	ADD X10, X1, XZR	// X10 --> n
+
+// 	fill_top:
+// 		SUBI X10, X10, #1
+// 		STUR X10, [X9, #0]
+// 		ADDI X9, X9, #8
+
+// 		SUBS XZR, X10, XZR
+// 		B.NE fill_top
+// 		BR LR
+
+insertion_sort:
+    ADD X21, LR, XZR    // saving link value
+    ADDI X18, XZR, #1   // X18 = i = 1
+    ADD X9, XZR, X18    // copy X18 to X9
+    LSL X9, X9, #3
+    ADD X9, X0, X9      // a[i]
+    LDUR X10, [X9, #0]  // X10 = value = a[i]
+    insertion_sort_loop:
+        SUBS XZR, X18, X1       // compare i and length
+        B.GE insertion_sort_end
+        // stack?
+        // SUBI SP, SP, #16
+        // STUR X1, [SP, #0]
+        // STUR X0, [SP, #8]
+        ADD X3, X18, XZR        // parameter i for is_shift
+        BL is_shift
+        ADD X11, X12, XZR       // X11 = return value from is_shift = param for is_insert
+        // LDUR X0, [SP, #8]
+        BL is_insert
+
+        B insertion_sort_loop
+    insertion_sort_end:
+        ADD LR, X21, XZR
+        BR LR
+
+// insertion_sort:
+//     ADD X19, X0, XZR    // X19 --> a
+//     ADD X20, X1, XZR    // X20 --> n
+//     ADDI X21, XZR, #1    // X21 --> i
+
+//     SUBI SP, SP, #8
+//     STUR LR, [SP, #0]
+
+//     insertion_sort_loop:
+//         LSL X22, X21, #3
+//         ADD X22, X19, X22            // a[i]
+//         LDUR X22, [X22, #0]          // value = a[i]
+
+//         // params: X0 --> a, X1 --> i
+//         ADD X1, XZR, X21             // i
+//         BL is_shift
+
+//         ADD X23, XZR, X10            // return value from is_shift
+//         BL is_insert
+
+//         ADDI X21, X21, #1
+//         SUBS XZR, X21, X20
+//         B.LT insertion_sort_loop
+
+//         LDUR LR, [SP, #0]
+//         ADDI SP, SP, #8
+//         BR LR
+
+is_shift:
+    // X3 = end
+    SUBI X12, X3, #1    // X21 = i = end - 1
+    LSL X4, X3, #3
+    ADD X4, X0, X4      // a[end]
+    LDUR X13, [X4, #0]  // X13 = a[end] 
+    SUBI X14, XZR, #1   // X14 = -1
+    is_shift_loop:
+        SUBS XZR, X12, X14
+        B.LE is_shift_end
+        LSL X12, X12, #3
+        ADD X12, X0, X12        // a[i]
+        LDUR X15, [X12, #0]     // X15 = a[i]
+        SUBS XZR, X15, X13
+        B.LE is_shift_end
+        ADDI X12, X12, #1       // i+1
+        LDUR X16, [X12, #0]
+        SUBI X12, X12, #1
+        STUR X16, [X12, #0]     // X16 = a[i+1] = a[i]
+        SUBI X12, X12, #1       // i--
+
+        // ADD X16, X12, #1     // X16 = i + 1
+        // LSL X6, X16, #3
+        // ADD X6, X0, X6       // a[i+1]
+        // LDUR X17, [X6, #0]   // X17 = a[i+1]
+
+        B is_shift_loop
+    is_shift_end:
+        ADDI X12, X12, #1       // i + 1
+        BR LR
+
+// is_shift:
+//     ADD X9, X0, XZR     // a
+//     SUBI X10, X1, #1    // i = end - 1
+//     ADD X11, X1, XZR    // end
+
+//     LSL X12, X11, #3
+//     ADD X12, X9, X12    // X0 or X9
+//     LDUR X12, [X12, #0] // tmp = a[end]
+//     SUBI X13, XZR, #1   // -1
+
+//     is_shift_loop:
+//         SUBS XZR, X10, X13
+//         B.LE is_shift_end
+
+//         LSL X14, X10, #3
+//         ADD X14, X9, X14        // X0 or X9
+//         LDUR X15, [X14, #0]     // a[i]
+//         SUBS XZR, X14, X12
+//         B.LE is_shift_end
+
+//         ADDI X14, X14, #8       // i+1
+//         STUR X15, [X14, #0]     // a[i+1] = a[i]
+        
+//         SUBI X10, X10, #1       // i--
+
+//         is_shift_end:
+//             ADDI X10, X10, #1   // i+1
+//             BR LR
+
+is_insert:
+    // X0 = array, X22 = what, X13 = where
+    LSL X16, X23, #3
+    ADD X16, X0, X16
+    LDUR X17, [X16, #0]
+    ADD X16, XZR, X22
+    STUR X17, [X16, #0]
+    BR LR
+
+print_array:
+    ADD X9, X0, XZR
+    print_array_loop:
+        CBZ X1, print_array_end     // Check if we are out of elements
+        LDUR X0, [X9, #0]           // Load first element
+        PRNT X0                     // Print it
+        ADDI X9, X9, #8             // INcrement array
+        SUBI X1, X1, #1             // Remove one from size
+        B print_array_loop          
+    print_array_end:
+        BR LR
+
+binary_search:          //Params x0 is array, X1 is value to find, x2 is size of array
+    SUBI X2, X2, #1     //Changing from amount of elements to amount of indexs(n-1)
+    ADD X11, X2, XZR    //Storing original amount of indexes
+    ADD X13, X2, XZR    //High end
+    ADD X14, XZR, XZR   //Low end
+    LSR X2, X2, #1      //Finding middle index(does integer division)
+    ADD X9, X2, XZR     //Storing current index to return index 
+    search_loop:
+        LSL X2, X2, #3      //Multiplying by 8 to account for size of integer
+        SUBI SP, SP, #8     //MOve stack to store initial array value
+        STUR X0, [SP, #0]   //Store initial array value in stack
+        ADD X0, X2, x0      //Move to current needed index
+        LDUR X10, [X0, #0]  //LOad needed index in
+        SUBS XZR, X10, X1   //Check if current looking index is equal less than or greater than and branch accordingly
+        B.EQ found
+        CBZ X2, notfound    //Check if out of indexs going left
+        SUB X12, X11, X2    //Create variable that determines if we are out of right indexes
+        CBZ X12, notfound
+        B.GT leftside
+        B.LT rightside
+        leftside:
+            LSR X2, X2, #3
+            ADD X13, X2, XZR
+            SUB X15, X2, X14
+            LSR X15, X15, #1
+            CBZ X15, zeroControl
+            SUB X2, X2, X15
+            LDUR X0, [SP, #0]
+            ADDI SP, SP, #8
+            B search_loop
+            zeroControl:        //Process for moving to new middle breaks down when accsessing the first elemet so this is needed
+                SUBI X2, X2, #1
+                LDUR X0, [SP, #0]
+                ADDI SP, SP, #8
+                B search_loop
+        rightside:              //ADjust for min index of right side array
+            LDUR X0, [SP, #0]
+            ADDI SP, SP, #8
+            LSR X2, X2, #3
+            ADD X14, X2, XZR
+            SUBI X15, X2, #1
+            SUB X15, X13, X15
+            LSR X15, X15, #1
+            CBZ X15, notfound   //If we get stuck at the last element we know its not found
+            ADD X2, X2, X15
+            B search_loop
+        found:
+            ADDI SP, SP, #8     //Fix stack
+            LSR X2, X2, #3      //Adjust index
+            ADD X0, X2, XZR
+            BR LR               //Back to main
+        notfound:
+            ADDI X0, XZR, #-1   //Set return index to -1
+            BR LR               //Back to main
+
+end:
+    HALT 
